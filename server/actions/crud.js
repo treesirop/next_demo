@@ -16,8 +16,8 @@ export async function createPost(formData) {
   const newRecord = {
     id: uuidv4(),
     drugName,
-    createdAt: new Date().toISOString().split("T")[0], // 格式化为年月日
-    updatedAt: new Date().toISOString().split("T")[0], // 格式化为年月日
+    createdAt: new Date().toISOString(), // 格式化为年月日
+    updatedAt: new Date().toISOString(), // 格式化为年月日
   };
 
   try {
@@ -37,7 +37,7 @@ export async function updatePost(id, formData) {
     return { error: "Drug Name is required" };
   }
 
-  const updatedAt = new Date().toISOString().split("T")[0]; // 格式化为年月日
+  const updatedAt = new Date().toISOString(); // 格式化为年月日
 
   try {
     await db
@@ -84,10 +84,27 @@ export async function getPost(id) {
 }
 
 // 查询所有记录
-export async function getAllPosts() {
+export async function getAllPosts(page = 1, pageSize = 6) {
   try {
-    const results = await db.select().from(sum).all();
-    return results;
+    const offset = (page - 1) * pageSize;
+    const results = await db
+      .select()
+      .from(sum)
+      .limit(pageSize)
+      .offset(offset)
+      .all();
+
+    const totalRecords = await db
+      .select({ count: sql`COUNT(*)` })
+      .from(sum)
+      .get();
+    const totalPages = Math.ceil(totalRecords.count / pageSize);
+
+    return {
+      posts: results,
+      totalPages,
+      currentPage: page,
+    };
   } catch (error) {
     console.error("Error querying all records:", error);
     return { error: "Failed to query all records" };
