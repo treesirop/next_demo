@@ -15,7 +15,13 @@ type Post = {
   updatedAt: string;
 };
 
-type GetAllPostsResult = Post[] | { error: string };
+type GetAllPostsResult =
+  | {
+      posts: Post[];
+      totalPages: number;
+      currentPage: number;
+    }
+  | { error: string };
 
 export default function Home() {
   const [drugName, setDrugName] = useState("");
@@ -23,10 +29,12 @@ export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, [currentPage]);
 
   useEffect(() => {
     const filtered = posts.filter((post) =>
@@ -35,18 +43,20 @@ export default function Home() {
     setFilteredPosts(filtered);
   }, [searchKeyword, posts]);
 
-  const fetchPosts = async () => {
-    const result = await getAllPosts();
+  const fetchPosts = async (page = currentPage) => {
+    const result = await getAllPosts(page);
     if ("error" in result) {
       console.error(result.error);
     } else {
-      const formattedPosts = result.map((post) => ({
+      const formattedPosts = result.posts.map((post) => ({
         ...post,
         createdAt: new Date(post.createdAt).toLocaleString(),
         updatedAt: new Date(post.updatedAt).toLocaleString(),
       }));
       setPosts(formattedPosts);
       setFilteredPosts(formattedPosts);
+      setTotalPages(result.totalPages);
+      setCurrentPage(result.currentPage);
     }
   };
 
@@ -98,6 +108,10 @@ export default function Home() {
   const handleEdit = (post: Post) => {
     setDrugName(post.drugName);
     setSelectedPost(post);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   return (
@@ -166,6 +180,26 @@ export default function Home() {
           ))}
         </tbody>
       </table>
+
+      <div className="mt-4 flex justify-center">
+        <button
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="bg-blue-500 text-white p-2 mr-2"
+        >
+          上一页
+        </button>
+        <span className="p-2">
+          第 {currentPage} 页，共 {totalPages} 页
+        </span>
+        <button
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="bg-blue-500 text-white p-2 ml-2"
+        >
+          下一页
+        </button>
+      </div>
     </div>
   );
 }
